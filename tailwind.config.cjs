@@ -12,6 +12,8 @@ module.exports = {
             pink: '#C8A2C9',
             peach: '#F6C492',
             darkpeach: '#F6A192',
+            green: '#0ACF83',
+            darkBlue: '#4E60FF'
         },
         extend: {},
     },

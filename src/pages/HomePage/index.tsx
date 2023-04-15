@@ -1,4 +1,4 @@
-import React, { FC, useState, useRef } from "react";
+import React, { FC, useState } from "react";
 import { YMaps, Map } from "react-yandex-maps";
 import axios from "axios";
 import { Input, Select } from "antd";
@@ -16,39 +16,42 @@ export const HomePage: FC = () => {
   const [corpus, setCorpus] = useState("");
   const [nameOfBuilding, setNameOfBuilding] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
-  const [isSearching, setIsSearching] = useState(false) 
-  const [options, setOptions] = useState([{
-    label: 'huinya', value: 'cringe'
-  }]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [options, setOptions] = useState([
+    {
+      label: "huinya",
+      value: "cringe",
+    },
+  ]);
 
-  const [mapState, setMapState] = useState({ center: [51.1605, 71.4704], zoom: 9 })
+  const [mapState, setMapState] = useState({
+    center: [51.1605, 71.4704],
+    zoom: 9,
+  });
 
-
-
-
-
-  const searchOnMap = (e: any): any =>{
-    setIsSearching(true)
-    axios.get(
-      `https://geocode-maps.yandex.ru/1.x/?apikey=086d27be-6f48-4c9d-830b-b6652da76c52&geocode=${e}&format=json`
-    ).then((res) =>{
-      console.log('heyy');
-      
-      const responseObj = res.data.response.GeoObjectCollection.featureMember.map((item)=>{
-        return {label: item.GeoObject.metaDataProperty.GeocoderMetaData.text, value: item.GeoObject.Point.pos}
-      })
-      setOptions(responseObj)
-      console.log(responseObj)
-
-
-    })
-
-  }
-  const showAddress = (e: any): any =>{
-    setIsSearching(false)
-    setMapState({center: [e.split(" ")[1], e.split(" ")[0]], zoom: 18})
-    
-  }
+  const searchOnMap = (e: any): any => {
+    setIsSearching(true);
+    axios
+      .get(
+        `https://geocode-maps.yandex.ru/1.x/?apikey=086d27be-6f48-4c9d-830b-b6652da76c52&geocode=${e}&format=json`
+      )
+      .then((res) => {
+        const responseObj =
+          res.data.response.GeoObjectCollection.featureMember.map(
+            (item: any) => {
+              return {
+                label: item.GeoObject.metaDataProperty.GeocoderMetaData.text,
+                value: item.GeoObject.Point.pos,
+              };
+            }
+          );
+        setOptions(responseObj);
+      });
+  };
+  const showAddress = (e: any): any => {
+    setIsSearching(false);
+    setMapState({ center: [e.split(" ")[1], e.split(" ")[0]], zoom: 18 });
+  };
   const handleMapClick = (e: any): void => {
     const coords = e.get("coords");
     axios
@@ -83,29 +86,26 @@ export const HomePage: FC = () => {
         <div className="tw-w-full">
           <YMaps>
             Hey
-            {isSearching ?  
-            <Select
-              // size={size}
-              defaultValue="Таңдау"
-              onChange={(e: any) => showAddress(e)}
-              style={{
-                width: "100%",
-              }}
-              size = "large"
-              options={options}
-            />
-            : 
-            
-            
-            <Search
-              placeholder="Адресс іздеу"
-              allowClear
-              enterButton="Іздеу"
-              size="large"
-              onSearch={(e: any) => searchOnMap(e)}
-            /> 
-             }
-            
+            {isSearching ? (
+              <Select
+                // size={size}
+                defaultValue="Таңдау"
+                onChange={(e: any) => showAddress(e)}
+                style={{
+                  width: "100%",
+                }}
+                size="large"
+                options={options}
+              />
+            ) : (
+              <Search
+                placeholder="Адресс іздеу"
+                allowClear
+                enterButton="Іздеу"
+                size="large"
+                onSearch={(e: any) => searchOnMap(e)}
+              />
+            )}
             <Map
               height="400px"
               width="100%"
