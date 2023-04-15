@@ -13,7 +13,8 @@ module.exports = {
             peach: '#F6C492',
             darkpeach: '#F6A192',
             green: '#0ACF83',
-            darkBlue: '#4E60FF'
+            darkBlue: '#4E60FF',
+            yellow: '#FEFFBE'
         },
         extend: {},
     },
