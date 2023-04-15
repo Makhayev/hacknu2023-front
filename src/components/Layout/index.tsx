@@ -3,8 +3,7 @@ import { Outlet } from "react-router-dom";
 
 export const Layout: FC<PropsWithChildren> = () => {
   return (
-    <div>
-      <div>Hello worlddd!</div>
+    <div className="tw-w-screen tw-h-screen">
       <Outlet />
     </div>
   );
