@@ -1,1 +1,0 @@
-Repository for frontend of hacknu 2023
