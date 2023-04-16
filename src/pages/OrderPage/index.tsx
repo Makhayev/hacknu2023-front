@@ -1,4 +1,4 @@
-import React, { ChangeEvent, FC, useState } from "react";
+import React, { ChangeEvent, FC, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   Button,
@@ -12,6 +12,7 @@ import {
   Select,
   Spin,
   Steps,
+  notification,
 } from "antd";
 import axios from "axios";
 import {
@@ -24,7 +25,7 @@ import Search from "antd/es/input/Search";
 
 export const OrderPage: FC = () => {
   const { id } = useParams();
-  const [currentStep, setCurrentStep] = useState(5);
+  const [currentStep, setCurrentStep] = useState(0);
   const [iin, setIin] = useState<string>("");
   const [name, setName] = useState<string>("");
   const [orderNumber, setOrderNumber] = useState<string>("");
@@ -34,6 +35,7 @@ export const OrderPage: FC = () => {
   const [phone, setPhone] = useState<string>("");
   const [trustedPerson, setTrustedPerson] = useState<boolean>(false);
   const [trustedPersonIin, setTrustedPersonIin] = useState<string>("");
+  const [open2, setOpen2] = useState(false);
   const [trustedPersonObj, setTrustedPersonObj] = useState<{
     iin: string;
     firstName: string;
@@ -43,8 +45,8 @@ export const OrderPage: FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [options, setOptions] = useState([
     {
-      label: "huinya",
-      value: "cringe",
+      label: "бір",
+      value: "екі",
     },
   ]);
   const [mapState, setMapState] = useState({
@@ -66,20 +68,29 @@ export const OrderPage: FC = () => {
   const [price, setPrice] = useState<string>("0.00");
   const [isPaid, setIsPaid] = useState<boolean>(false);
   const [open, setOpen] = useState(false);
-  const handleIinSubmit = () => {
+  const [iins, setiins] = useState([]);
+  const [potentialUser, setPotentialUser] = useState<any>();
+  const [isVideo, setIsVideo] = useState(false);
+  const handleIinSubmit = (potUserIin?: string) => {
     setIsSpinning(true);
-    axios.get(`http://10.101.7.135:8081/getInfo/${id}/${iin}`).then((res) => {
-      setName(
-        `${res.data.FL.firstName} ${res.data.FL.lastName} ${res.data.FL.middleName}`
-      );
-      const response = res.data.DocumentStatus.data;
-      setOrderNumber(response.requestId);
-      setServiceName(response.serviceType.nameKz);
-      setCON(response.organization.nameRu);
-      setPhone(res.data.BMG.phone);
-      setIsSpinning(false);
-    });
-    handleNextStep();
+    axios
+      .get(`http://10.101.7.135:8081/getInfo/${id}/${potUserIin ?? iin}`)
+      .then((res) => {
+        setName(
+          `${res.data.FL.firstName} ${res.data.FL.lastName} ${res.data.FL.middleName}`
+        );
+        const response = res.data.DocumentStatus.data;
+        setIsSpinning(false);
+        setOrderNumber(response.requestId);
+        setServiceName(response.serviceType.nameKz);
+        setCON(response.organization.nameRu);
+        setPhone(res.data.BMG.phone);
+        handleNextStep();
+      })
+      .catch(() => {
+        setIsSpinning(false);
+        notification.error({ message: "Қате" });
+      });
   };
   const handleNextStep = () => {
     setCurrentStep((prev) => prev + 1);
@@ -145,6 +156,124 @@ export const OrderPage: FC = () => {
       });
   };
 
+  useEffect(() => {
+    console.log(iins);
+    if (iins.length > 30) {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const uniques = [...new Set(iins)];
+      console.log(uniques);
+      const obj: any = {};
+      uniques.forEach((unique) => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        obj[unique] = 0;
+      });
+      iins.forEach((iin) => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        obj[iin] += 1;
+      });
+      let max = -1;
+      let maxIin = "";
+      Object.keys(obj).forEach((key) => {
+        if (obj[key] > max) {
+          max = obj[key];
+          maxIin = key;
+        }
+      });
+      console.log(maxIin);
+      axios.get(`http://10.101.7.135:8081/getFL/${maxIin}`).then((res) => {
+        console.log(res.data);
+        setPotentialUser(res.data);
+        setOpen2(true);
+      });
+    }
+  }, [iins]);
+
+  const videoRef = useRef(null);
+  useEffect(() => {
+    const videoElement = videoRef.current;
+    const plzzzz: any = [];
+
+    // Get access to user's video camera
+    navigator.mediaDevices
+      .getUserMedia({ video: true })
+      .then((stream) => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        videoElement.srcObject = stream;
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        videoElement.play();
+
+        // Send video stream frames to backend server
+        function sendVideoFrames() {
+          const canvasElement = document.createElement("canvas");
+          const context = canvasElement.getContext("2d");
+          context?.drawImage(
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            videoElement,
+            0,
+            0,
+            canvasElement.width,
+            canvasElement.height
+          );
+          const imageData = canvasElement.toDataURL("image/jpeg", 0.8); // Convert canvas to base64-encoded JPEG image data
+          if (plzzzz.length > 30) {
+            console.log(plzzzz);
+            setiins(plzzzz);
+            return;
+          }
+          axios
+            .post(
+              "http://10.101.45.17:81/foo",
+              {
+                video_frame: imageData,
+              },
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              }
+            )
+            .then((response) => {
+              if (response.data.message) {
+                plzzzz.push(response.data.message);
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore
+              }
+            })
+            .catch((error) => {
+              // Handle error
+              console.error("Failed to upload video frame:", error);
+            })
+            .finally(() => {
+              requestAnimationFrame(sendVideoFrames);
+            });
+        }
+        if (plzzzz.length < 30) {
+          sendVideoFrames();
+        }
+      })
+      .catch((error) => {
+        // Handle error
+        console.error(error);
+      });
+
+    // Cleanup on unmount
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      if (videoElement.srcObject) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        videoElement.srcObject.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [isVideo]);
   if (isSpinning) {
     return (
       <div className="tw-flex tw-justify-center tw-items-center tw-h-screen">
@@ -171,19 +300,19 @@ export const OrderPage: FC = () => {
             labelPlacement="vertical"
             items={[
               {
-                title: "ИИН",
+                title: "ЖСН",
               },
               {
-                title: "Данные о заказе",
+                title: "Тапсырыс туралы ақпарат",
               },
               {
-                title: "Данные о получателе",
+                title: "Алушы туралы ақпарат",
               },
               {
-                title: "Адрес доставки",
+                title: "Жеткізу мекен жайы",
               },
               {
-                title: "Готово",
+                title: "Дайын",
               },
             ]}
           />
@@ -205,12 +334,16 @@ export const OrderPage: FC = () => {
               />
               <Button
                 className="tw-h-12 tw-mt-8 tw-bg-green tw-w-full tw-text-white"
-                onClick={handleIinSubmit}
+                onClick={() => handleIinSubmit()}
               >
                 Жалғастыру
               </Button>
-              <div className="tw-text-darkBlue tw-w-full tw-mt-8 tw-text-center">
+              <div
+                className="tw-text-darkBlue tw-w-full tw-mt-8 tw-text-center tw-cursor-pointer"
+                onClick={() => setIsVideo(true)}
+              >
                 Face ID арқылы кіру
+                <video ref={videoRef} />
               </div>
             </div>
           </div>
@@ -226,17 +359,17 @@ export const OrderPage: FC = () => {
                 borderColor: "#6677F726",
               }}
             >
-              <div className="tw-text-2xl tw-mb-4">Данные о заказе</div>
+              <div className="tw-text-2xl tw-mb-4">Тапсырыс туралы ақпарат</div>
               <div className="tw-mb-4 tw-font-bold">
-                Номер заказа:
+                Тапсырыс номері:
                 <span className="tw-font-normal"> {orderNumber}</span>
               </div>
               <div className="tw-mb-4 tw-font-bold">
-                Наименование услуги:
+                Қызмет атауы:
                 <span className="tw-font-normal"> {serviceName}</span>
               </div>
               <div className="tw-mb-4 tw-font-bold">
-                Отделение: <span className="tw-font-normal">{CON}</span>
+                Бөлім: <span className="tw-font-normal">{CON}</span>
               </div>
             </div>
             <div className="tw-flex tw-justify-end tw-w-1/2 tw-mr-4">
@@ -244,7 +377,7 @@ export const OrderPage: FC = () => {
                 className="tw-bg-green tw-text-white tw-h-10 tw-mt-4"
                 onClick={handleNextStep}
               >
-                Жалгастыру
+                Жалғастыру
               </Button>
             </div>
           </div>
@@ -260,21 +393,21 @@ export const OrderPage: FC = () => {
                 borderColor: "#6677F726",
               }}
             >
-              <div className="tw-text-2xl tw-mb-4">Данные о заказе</div>
+              <div className="tw-text-2xl tw-mb-4">Тапсырыс туралы ақпарат</div>
               <div className="tw-mb-4 tw-font-bold">
-                Имя:
+                Аты:
                 <span className="tw-font-normal"> {name?.split(" ")[0]}</span>
               </div>
               <div className="tw-mb-4 tw-font-bold">
-                Фамилия:
+                Тегі:
                 <span className="tw-font-normal"> {name?.split(" ")[1]}</span>
               </div>
               <div className="tw-mb-4 tw-font-bold">
-                Отчество:
+                Әкесінің аты:
                 <span className="tw-font-normal">{name?.split(" ")[2]}</span>
               </div>
               <div className="tw-mb-4 tw-font-bold tw-flex tw-items-center">
-                Номер телефона:
+                Телефон нөмірі:
                 <Input
                   disabled
                   className="tw-font-normal tw-h-8 tw-w-80 tw-inline tw-ml-4"
@@ -296,13 +429,13 @@ export const OrderPage: FC = () => {
                     setTrustedPerson(event.target.checked);
                   }}
                 >
-                  Получение доставки доверенным лицом
+                  Сенімді адам арқылы тапсырысты қабылдау
                 </Checkbox>
               </ConfigProvider>
             </div>
             {trustedPerson && (
               <div className="tw-my-4 tw-font-bold tw-flex tw-items-center">
-                ИИН
+                ЖСН
                 <Input
                   value={trustedPersonIin}
                   className="tw-font-normal tw-h-8 tw-w-80 tw-inline tw-ml-4"
@@ -314,6 +447,9 @@ export const OrderPage: FC = () => {
                         )
                         .then((res) => {
                           setTrustedPersonObj(res.data);
+                        })
+                        .catch(() => {
+                          notification.error({ message: "Қате" });
                         });
                     } else if (event.target.value.length < 13) {
                       setTrustedPersonIin(event.target.value);
@@ -329,23 +465,25 @@ export const OrderPage: FC = () => {
                   borderColor: "#6677F726",
                 }}
               >
-                <div className="tw-text-2xl tw-mb-4">Данные о заказе</div>
+                <div className="tw-text-2xl tw-mb-4">
+                  Тапсырыс туралы ақпарат
+                </div>
                 <div className="tw-mb-4 tw-font-bold">
-                  Имя:
+                  аты:
                   <span className="tw-font-normal">
                     {" "}
                     {trustedPersonObj?.firstName}
                   </span>
                 </div>
                 <div className="tw-mb-4 tw-font-bold">
-                  Фамилия:
+                  тегі:
                   <span className="tw-font-normal">
                     {" "}
                     {trustedPersonObj?.lastName}
                   </span>
                 </div>
                 <div className="tw-mb-4 tw-font-bold">
-                  Отчество:
+                  Әкесінің аты:
                   <span className="tw-font-normal">
                     {trustedPersonObj?.middleName}
                   </span>
@@ -357,7 +495,7 @@ export const OrderPage: FC = () => {
                 className="tw-bg-green tw-text-white tw-h-10 tw-mt-4"
                 onClick={handleNextStep}
               >
-                Жалгастыру
+                Жалғастыру
               </Button>
             </div>
           </div>
@@ -418,7 +556,7 @@ export const OrderPage: FC = () => {
                   />
                 </div>
                 <div>
-                  <label>Город</label>
+                  <label>Қала</label>
                   <Input
                     value={city}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -429,7 +567,7 @@ export const OrderPage: FC = () => {
               </div>
               <div className="tw-flex">
                 <div>
-                  <label>Улица</label>
+                  <label>Көше</label>
                   <Input
                     value={street}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -438,7 +576,7 @@ export const OrderPage: FC = () => {
                   />
                 </div>
                 <div>
-                  <label>Номер дома</label>
+                  <label>Үй нөмірі</label>
                   <Input
                     value={houseNumber}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -449,7 +587,7 @@ export const OrderPage: FC = () => {
               </div>
               <div className="tw-flex tw-justify-between">
                 <div>
-                  <label>Квартира</label>
+                  <label>Пәтер</label>
                   <Input
                     value={flat}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -467,7 +605,7 @@ export const OrderPage: FC = () => {
                   />
                 </div>
                 <div>
-                  <label>Этаж</label>
+                  <label>Қабат</label>
                   <Input
                     value={floor}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -486,14 +624,14 @@ export const OrderPage: FC = () => {
                 </div>
               </div>
 
-              <label>Наименование ЖК</label>
+              <label>Тұрғын үй кешенінің аты</label>
               <Input
                 value={nameOfBuilding}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   setNameOfBuilding(e.target.value)
                 }
               />
-              <label>Дополнительная информация</label>
+              <label>Қосымша ақпарат</label>
               <Input
                 value={additionalInfo}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -508,29 +646,23 @@ export const OrderPage: FC = () => {
                 className="tw-flex tw-justify-around tw-w-full tw-mt-4"
               >
                 <Radio value={1}>Kaspi</Radio>
-                <Radio value={2}>Pony</Radio>
+                <Radio value={2}>PonyExpress</Radio>
                 <Radio value={3}>DHL</Radio>
               </Radio.Group>
               <div className="tw-flex tw-justify-center tw-w-full tw-mt-4">
                 <Button
                   onClick={() => {
                     axios
-                      .post("http://10.101.7.135:8081/orders/calculate", {
-                        customerIIN: iin,
-                        requestId: id,
-                        con: CON,
-                        courierCompanyId: mailService,
-                        address: `${street} ${houseNumber} квартира ${flat} подъезд ${entrance} этаж ${floor} ${corpus}, ${city} ${oblast}`,
-                        representative: trustedPersonIin ?? "",
-                      })
+                      .get(
+                        `http://10.101.7.135:8081/orders/calculate/${mailService}/${street} ${houseNumber}, ${city} ${oblast}`
+                      )
                       .then((res) => {
-                        console.log(res.data);
                         setKilometres(res.data[1]);
                         setPrice(res.data[0]);
                       });
                   }}
                 >
-                  Calculate
+                  Есептеу
                 </Button>
               </div>
               <div className="tw-flex tw-font-bold tw-text-4xl tw-justify-around">
@@ -542,20 +674,15 @@ export const OrderPage: FC = () => {
                   className="tw-bg-green"
                   onClick={() => {
                     axios
-                      .post("http://10.101.7.135:8081/orders/createOrder", {
-                        customerIIN: iin,
-                        requestId: id,
-                        con: CON,
-                        courierCompanyId: mailService,
-                        address: `${street} ${houseNumber} квартира ${flat} подъезд ${entrance} этаж ${floor} ${corpus}, ${city} ${oblast}`,
-                        representative: trustedPersonIin ?? "",
-                      })
+                      .put(
+                        `http://10.101.7.135:8081/orders/createOrder/${orderNumber}/${mailService}/${street} ${houseNumber} квартира ${flat} подъезд ${entrance} этаж ${floor} ${corpus}, ${city} ${oblast}/${trustedPersonIin}`
+                      )
                       .then(() => {
                         handleNextStep();
                       });
                   }}
                 >
-                  Zhalgastyru
+                  Жалғастыру
                 </Button>
               )}
             </div>
@@ -572,17 +699,17 @@ export const OrderPage: FC = () => {
                 borderColor: "#6677F726",
               }}
             >
-              <div className="tw-text-2xl tw-mb-4">Данные о заказе</div>
+              <div className="tw-text-2xl tw-mb-4">Тапсырыс туралы ақпарат</div>
               <div className="tw-mb-4 tw-font-bold">
-                Имя:
+                Аты:
                 <span className="tw-font-normal"> {name?.split(" ")[0]}</span>
               </div>
               <div className="tw-mb-4 tw-font-bold">
-                Фамилия:
+                Тегі:
                 <span className="tw-font-normal"> {name?.split(" ")[1]}</span>
               </div>
               <div className="tw-mb-4 tw-font-bold">
-                Отчество:
+                Әкесінің аты:
                 <span className="tw-font-normal">{name?.split(" ")[2]}</span>
               </div>
             </div>
@@ -592,22 +719,22 @@ export const OrderPage: FC = () => {
                 borderColor: "#6677F726",
               }}
             >
-              <div className="tw-text-2xl tw-mb-4">Данные о заказе</div>
+              <div className="tw-text-2xl tw-mb-4">Тапсырыс туралы ақпарат</div>
               <div className="tw-mb-4 tw-font-bold">
-                Номер заказа:
+                Тапсырыс нөмірі:
                 <span className="tw-font-normal"> {orderNumber}</span>
               </div>
               <div className="tw-mb-4 tw-font-bold">
-                Наименование услуги:
+                Қызмет атауы:
                 <span className="tw-font-normal"> {serviceName}</span>
               </div>
               <div className="tw-mb-4 tw-font-bold">
-                Отделение: <span className="tw-font-normal">{CON}</span>
+                Бөлім: <span className="tw-font-normal">{CON}</span>
               </div>
             </div>
             <div className="tw-mt-8 tw-w-1/2 tw-border-solid tw-border-dark tw-border-2 tw-rounded-xl tw-p-4">
               <div className="tw-font-bold tw-text-4xl tw-pt-4 tw-pl-4">
-                Окошко оплаты
+                Төлем қабылдау
               </div>
               <Divider className="tw-border-dark tw-w-1/2" />
               <div className="tw-flex tw-justify-around tw-font-bold tw-text-4xl">
@@ -619,7 +746,7 @@ export const OrderPage: FC = () => {
                 <div className="tw-flex tw-flex-col tw-px-8">
                   <div>
                     <Input />
-                    <label>Card number</label>
+                    <label>Картаңыздың нөмірі</label>
                   </div>
                   <div className="tw-flex tw-mt-4 tw-justify-between">
                     <div className="tw-w-1/4">
@@ -633,9 +760,7 @@ export const OrderPage: FC = () => {
                   </div>
                 </div>
                 <div className="tw-flex tw-flex-col tw-items-center">
-                  <div className="tw-font-bold tw-text-center">
-                    Метод оплаты
-                  </div>
+                  <div className="tw-font-bold tw-text-center">Төлем жолы</div>
                   <div>VISA</div>
                 </div>
               </div>
@@ -644,6 +769,9 @@ export const OrderPage: FC = () => {
                   className="tw-mr-8 tw-bg-green tw-text-white"
                   onClick={() => {
                     setIsPaid(true);
+                    axios.put(
+                      `http://10.101.7.135:8081/orders/approvePayment/${id}`
+                    );
                   }}
                 >
                   Pay
@@ -658,12 +786,29 @@ export const OrderPage: FC = () => {
                   setOpen(true);
                 }}
               >
-                zhalgastyru
+                Жалғастыру
               </Button>
             </div>
           </div>
         )}
       </ConfigProvider>
+      <Modal
+        open={open2}
+        closable
+        onCancel={() => setOpen2(false)}
+        footer={null}
+      >
+        Сіздің толық аты жөніңіз {potentialUser?.firstName}{" "}
+        {potentialUser?.lastName} {potentialUser?.middleName} ме?
+        <Button
+          className="tw-bg-green"
+          onClick={() => {
+            handleIinSubmit(potentialUser?.iin);
+          }}
+        >
+          ИӘ
+        </Button>
+      </Modal>
       <Modal
         open={open}
         closable
@@ -674,11 +819,10 @@ export const OrderPage: FC = () => {
         maskClosable
       >
         <div className="tw-font-semibold tw-text-xl tw-text-center">
-          <div className="tw-font-bold tw-text-2xl"> Внимание!</div>
+          <div className="tw-font-bold tw-text-2xl"> Назар аударыңыз!</div>
           <div>
-            Документы выдаются только заявителю! В случае отсутствия заявителя
-            требуется нотариальная доверенность на получение документов в
-            оригинале!
+            Құжаттар тек қана тапсырыс берушіге! Егер беруші болмаса нотариалдық
+            сенімхатыңыз болу қажет!
           </div>
         </div>
       </Modal>
