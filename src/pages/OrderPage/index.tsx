@@ -197,71 +197,73 @@ export const OrderPage: FC = () => {
     const plzzzz: any = [];
 
     // Get access to user's video camera
-    navigator.mediaDevices
-      .getUserMedia({ video: true })
-      .then((stream) => {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        videoElement.srcObject = stream;
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
-        videoElement.play();
+    if (navigator?.mediaDevices) {
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          videoElement.srcObject = stream;
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          videoElement.play();
 
-        // Send video stream frames to backend server
-        function sendVideoFrames() {
-          const canvasElement = document.createElement("canvas");
-          const context = canvasElement.getContext("2d");
-          context?.drawImage(
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            videoElement,
-            0,
-            0,
-            canvasElement.width,
-            canvasElement.height
-          );
-          const imageData = canvasElement.toDataURL("image/jpeg", 0.8); // Convert canvas to base64-encoded JPEG image data
-          if (plzzzz.length > 30) {
-            console.log(plzzzz);
-            setiins(plzzzz);
-            return;
-          }
-          axios
-            .post(
-              "http://10.101.45.17:81/foo",
-              {
-                video_frame: imageData,
-              },
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
+          // Send video stream frames to backend server
+          function sendVideoFrames() {
+            const canvasElement = document.createElement("canvas");
+            const context = canvasElement.getContext("2d");
+            context?.drawImage(
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+              // @ts-ignore
+              videoElement,
+              0,
+              0,
+              canvasElement.width,
+              canvasElement.height
+            );
+            const imageData = canvasElement.toDataURL("image/jpeg", 0.8); // Convert canvas to base64-encoded JPEG image data
+            if (plzzzz.length > 30) {
+              console.log(plzzzz);
+              setiins(plzzzz);
+              return;
+            }
+            axios
+              .post(
+                "http://10.101.45.17:81/foo",
+                {
+                  video_frame: imageData,
                 },
-              }
-            )
-            .then((response) => {
-              if (response.data.message) {
-                plzzzz.push(response.data.message);
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-ignore
-              }
-            })
-            .catch((error) => {
-              // Handle error
-              console.error("Failed to upload video frame:", error);
-            })
-            .finally(() => {
-              requestAnimationFrame(sendVideoFrames);
-            });
-        }
-        if (plzzzz.length < 30) {
-          sendVideoFrames();
-        }
-      })
-      .catch((error) => {
-        // Handle error
-        console.error(error);
-      });
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                }
+              )
+              .then((response) => {
+                if (response.data.message) {
+                  plzzzz.push(response.data.message);
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                  // @ts-ignore
+                }
+              })
+              .catch((error) => {
+                // Handle error
+                console.error("Failed to upload video frame:", error);
+              })
+              .finally(() => {
+                requestAnimationFrame(sendVideoFrames);
+              });
+          }
+          if (plzzzz.length < 30) {
+            sendVideoFrames();
+          }
+        })
+        .catch((error) => {
+          // Handle error
+          console.error(error);
+        });
+    }
 
     // Cleanup on unmount
     return () => {
@@ -669,21 +671,55 @@ export const OrderPage: FC = () => {
                 <div>₸{price}</div>
                 <div>{kilometres}KM</div>
               </div>
-              {price !== "0.00" && (
-                <Button
-                  className="tw-bg-green"
-                  onClick={() => {
-                    axios
-                      .put(
-                        `http://10.101.7.135:8081/orders/createOrder/${orderNumber}/${mailService}/${street} ${houseNumber} квартира ${flat} подъезд ${entrance} этаж ${floor} ${corpus}, ${city} ${oblast}/${trustedPersonIin}`
-                      )
-                      .then(() => {
-                        handleNextStep();
-                      });
+              <div>
+                <ConfigProvider
+                  theme={{
+                    components: {
+                      Checkbox: {
+                        colorPrimary: "#0ACF83",
+                      },
+                    },
                   }}
                 >
-                  Жалғастыру
-                </Button>
+                  <div className="tw-flex tw-flex-col">
+                    <Checkbox>
+                      Мен{" "}
+                      <a target="_blank" href="/offer.pdf">
+                        оферта шартына
+                      </a>{" "}
+                      келісім беремін
+                    </Checkbox>
+                    <Checkbox
+                      style={{
+                        marginLeft: 0,
+                      }}
+                    >
+                      Мен{" "}
+                      <a target="_blank" href="/confidentiality.PDF">
+                        құпиялылық саясаты шартына
+                      </a>{" "}
+                      келісім беремін
+                    </Checkbox>
+                  </div>
+                </ConfigProvider>
+              </div>
+              {price !== "0.00" && (
+                <div className="tw-w-full tw-flex tw-justify-center">
+                  <Button
+                    className="tw-bg-green tw-text-white"
+                    onClick={() => {
+                      axios
+                        .put(
+                          `http://10.101.7.135:8081/orders/createOrder/${orderNumber}/${mailService}/${street} ${houseNumber} квартира ${flat} подъезд ${entrance} этаж ${floor} ${corpus}, ${city} ${oblast}/${trustedPersonIin}`
+                        )
+                        .then(() => {
+                          handleNextStep();
+                        });
+                    }}
+                  >
+                    Жалғастыру
+                  </Button>
+                </div>
               )}
             </div>
           </div>

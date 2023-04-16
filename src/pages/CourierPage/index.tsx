@@ -1,6 +1,7 @@
 import React, { ChangeEvent, FC, useState } from "react";
 import {
   Button,
+  Checkbox,
   ConfigProvider,
   Input,
   Modal,
@@ -135,6 +136,23 @@ export const CourierPage: FC = () => {
                     {moment(order.dateTimeReady).format("DD.MM.YYYY")}
                   </span>
                 </div>
+                <ConfigProvider
+                  theme={{
+                    components: {
+                      Checkbox: {
+                        colorPrimary: "#0ACF83",
+                      },
+                    },
+                  }}
+                >
+                  <Checkbox>
+                    Мен{" "}
+                    <a target="_blank" href="/offer.pdf">
+                      оферта шартына
+                    </a>{" "}
+                    келісім беремін
+                  </Checkbox>
+                </ConfigProvider>
               </div>
             ))
           : currentStep === 1
